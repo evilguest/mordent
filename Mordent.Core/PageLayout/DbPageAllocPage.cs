@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace Mordent.Core
 {
@@ -19,12 +20,22 @@ namespace Mordent.Core
     public unsafe struct DbPageAllocPage
     {
         private const int Capacity = (DbPage.Size - DbPageHeader.Size) / sizeof(PageAllocationStatus);
-        public DbPageHeader _header;
+        public DbPageHeader Header;
         private fixed byte _pageStatus[Capacity];
         public PageAllocationStatus this[ushort pageNo]
         {
             get => (PageAllocationStatus)_pageStatus[pageNo];
             set => _pageStatus[pageNo] = (byte)value;
+        }
+        /// <summary>
+        /// Looks through eight pages in the requested extent to find the unallocated one.
+        /// </summary>
+        /// <param name="extentNumber">The number of extent to scan</param>
+        /// <returns>The number (0 to 7) of the page within extent</returns>
+        public int FindFirstNonAllocatedPage(int extentNumber)
+        {
+            fixed (DbPageAllocPage* pagePtr = &this)
+                return new ReadOnlySpan<byte>(pagePtr->_pageStatus + extentNumber * 8, 8).IndexOf((byte)0);
         }
     }
 }

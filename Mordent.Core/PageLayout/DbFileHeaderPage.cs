@@ -24,7 +24,7 @@ namespace Mordent.Core
         public short RowNo 
         { 
             get => (short)(_data & (DbPage.Size - 1));
-            set => _data = (_data & ~(DbPage.Size - 1)) | (value & (DbPage.Size - 1));
+            set => _data = (_data & ~DbPage.SizeMask) | (value & DbPage.SizeMask);
         }
     }
 
