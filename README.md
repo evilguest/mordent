@@ -1,3 +1,4 @@
+﻿![Build Status](https://github.com/evilguest/mordent/actions/workflows/dotnet.yml/badge.svg?branch=main) 
 # Mordent
 Mordent is a fully managed relational database management system for .Net.
 This is an open-source research project startign from scratch.
