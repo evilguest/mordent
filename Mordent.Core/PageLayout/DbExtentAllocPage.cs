@@ -4,11 +4,11 @@ using System.Runtime.InteropServices;
 namespace Mordent.Core
 {
     [StructLayout(LayoutKind.Sequential, Size = DbPage.Size)]
-    public unsafe struct DbExtentAllocPage
+    public unsafe struct DbExtentAllocPage: IDbPage
     {
         private const int Capacity = (DbPage.Size - DbPageHeader.Size) / sizeof(PageAllocationStatus);
         public const int ExtentsCount = Capacity * 8; // bits per byte
-        public DbPageHeader Header;
+        private DbPageHeader _header;
         internal fixed byte _extentStatus[Capacity];
         /// <summary>
         /// Reports whether the requested extent is free
@@ -40,6 +40,15 @@ namespace Mordent.Core
         }
 
         private static readonly IDatabaseHardware _hardwareHelper = InitializeHardware();
+
+        public ref DbPageHeader Header
+        {
+            get
+            {
+                fixed (DbPageHeader* headerPtr = &_header)
+                    return ref *headerPtr;
+            }
+        }
 
         private static IDatabaseHardware InitializeHardware()
         {

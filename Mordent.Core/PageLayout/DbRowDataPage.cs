@@ -10,12 +10,12 @@ namespace Mordent.Core
     /// row offsets in reverse order, i.e. row 0 does have an offset at the very end.
     /// </summary>
     [StructLayout(LayoutKind.Explicit, Size = DbPage.Size)]
-    public unsafe struct DbRowDataPage
+    public unsafe struct DbRowDataPage: IDbPage
     {
         internal const short Capacity = (DbPage.Size - DbPageHeader.Size);
         internal const short MaxSlots = Capacity / sizeof(short);
         [FieldOffset(0)]
-        public DbPageHeader Header;
+        private DbPageHeader _header;
         [FieldOffset(DbPageHeader.Size)]
         internal fixed short _rowOffsets[MaxSlots];
         [FieldOffset(DbPageHeader.Size)]
@@ -52,6 +52,16 @@ namespace Mordent.Core
         public short FreeSpace => Header.DataCount == 0
                 ? Capacity
                 : (short)(Capacity - (Header.DataCount * sizeof(short)) - _rowOffsets[MaxSlots - Header.DataCount]);
+
+        public ref DbPageHeader Header // we inject header into every page.
+        {
+            get
+            {
+                fixed (DbPageHeader* headerPtr = &_header)
+                    return ref *headerPtr;
+            }
+        }
+
         public void DeleteRow(short rowNo)
         {
             // TODO: locks!

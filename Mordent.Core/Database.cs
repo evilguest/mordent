@@ -14,14 +14,14 @@ namespace Mordent.Core
 {
     public struct DatabaseFile
     {
-        public DbFileHeaderPage FileHeader;
         public DbPageAllocPage FreeSpacePage1;
         public DbExtentAllocPage GamPage1;
         public DbExtentAllocPage SgamPage1;
+        public DbFileHeaderPage FileHeader;
         public DbRowDataPage BootPage; //TODO: fill in the boot page
     }
 
-    public class Database : IDisposable
+    public unsafe class Database : IDisposable
     {
         private const long MordentDataTag = 0x44_74_6E_65_64_72_6F_4D;
         private object __databaseLock = new object(); // used for locking
@@ -66,30 +66,27 @@ namespace Mordent.Core
         public long PageCount 
         {
             get => ExtentsCount << 3; // * 8
-            set => ExtentsCount = (value >> 3) + ((value & 0b111) != 0 ? 1 : 0);
+            set => ExtentsCount = (int)((value >> 3) + ((value & 0b111) != 0 ? 1 : 0));
         }
 
-        public long ExtentsCount
+        public int ExtentsCount
         {
             get
             {
                 lock (__databaseLock)
-                    return _fileStream.Length >> (DbPage.SizeLog + 3);
+                    return (int)(_fileStream.Length >> (DbPage.SizeLog + 3));
             }
             set
             {
                 lock (__databaseLock)
                 {
-                    if (value == ExtentsCount) // no change
+                    var oldValue = ExtentsCount;
+                    if (value == oldValue) // no change
                         return;
-                    if (value < ExtentsCount)
+                    if (value < oldValue)
                     {
                         // TODO: check that the pages being cut are not allocated
 
-                    }
-                    if (value < ExtentsCount)
-                    {
-                        // TODO: init GAM, SGAM, and PF pages
                     }
                     _fileStream.SetLength(value << (DbPage.SizeLog + 3));
                     _fileStream.Flush();
@@ -101,16 +98,88 @@ namespace Mordent.Core
                     }
                     _fileMmf = MemoryMappedFile.CreateFromFile(_fileStream, null, 0, MemoryMappedFileAccess.ReadWrite, HandleInheritability.None, true);
                     _acc = _fileMmf.CreateDirectAccessor();
+                    // TODO: init GAM, SGAM, and PF pages
+                    InitPFPages(oldValue, value);
+                    InitGamSgamPages(oldValue, value);
                 }
             }
         }
+
+        private void InitPFPages(int oldExtentsCount, int newExtentsCount)
+        {
+            var firstNewPF = oldExtentsCount == 0 ? 0 : (oldExtentsCount * 8) / DbPageAllocPage.PagesCapacity + 1;
+            var lastNewPF = (newExtentsCount*8) / DbPageAllocPage.PagesCapacity;
+            for (var i = firstNewPF; i <= lastNewPF; i++) // this cycle would be empty if we aren't crossing the PF boundary
+            {
+                int newPFPageNum = i * DbPageAllocPage.PagesCapacity;
+                InitPfPage(GetPagePtr<DbPageAllocPage>(newPFPageNum));
+                MarkPageMixedExtent(newPFPageNum);
+            }
+        }
+
+        private void MarkPageAllocated(int pageNo)
+        {
+            var pfPagePtr = GetPFPageForPage(ref pageNo);
+            (*pfPagePtr)[(ushort)pageNo] |= PageAllocationStatus.PageAllocatedMask;
+        }
+
+        private DbPageAllocPage*  GetPFPageForPage(ref int pageNum)
+        {
+            var pfPageNo = pageNum / DbPageAllocPage.PagesCapacity;
+            var result = GetPagePtr<DbPageAllocPage>(pfPageNo);
+            if (result->Header.Type != DbPageType.FreeSpace)
+                throw new InvalidOperationException("Invalid PF page type");
+            pageNum = pageNum % DbPageAllocPage.PagesCapacity;
+            return result;
+        }
+
+        private void MarkPageMixedExtent(int pageNo)
+        {
+            var pfPagePtr = GetPFPageForPage(ref pageNo);
+            (*pfPagePtr)[(ushort)pageNo] |= PageAllocationStatus.PageAllocatedMask | PageAllocationStatus.PageMixedExtentMask;
+            MarkExtentMixed(pageNo / 8);
+        }
+
+        private void MarkExtentMixed(int extentNo)
+        {
+            var gamPageRef = GetGamPageRefForExtent(ref extentNo);
+            gamPageRef[0][extentNo] = false; // GAM: segment is no longer available
+            gamPageRef[1][extentNo] = true;  // SGAM: segment is mixed
+        }
+
+
+        private void InitPfPage(DbPageAllocPage* dbPageAllocPage)
+        {
+            dbPageAllocPage->Header.Type = DbPageType.FreeSpace;
+        }
+
+        private void InitGamSgamPages(int oldExtentsCount, int newExtentsCount)
+        {
+            var firstNewGam = oldExtentsCount == 0 ? 0 : (oldExtentsCount - 1) / DbExtentAllocPage.ExtentsCount + 1;
+            var lastNewGam = (newExtentsCount - 1) / DbExtentAllocPage.ExtentsCount;
+            for (var i = firstNewGam; i <= lastNewGam; i++) // this cycle would be empty if we aren't crossing the GAM boundary
+            {
+                int gamPageNo = i * DbExtentAllocPage.ExtentsCount + 1;
+                InitGamPage(GetPagePtr<DbExtentAllocPage>(gamPageNo), true);  // GAM
+                InitGamPage(GetPagePtr<DbExtentAllocPage>(gamPageNo + 1), false); // SGAM
+                MarkExtentMixed(gamPageNo / 8); // The first extent of the GAM/SGAM is partially busy with the SGAM page itself!
+            }
+
+        }
+
+        private void InitGamPage(DbExtentAllocPage* dbExtentAllocPage, bool state)
+        {
+            dbExtentAllocPage->Header.Type = DbPageType.GlobalAllocationMap;
+            dbExtentAllocPage->Initialize(state);
+        }
+
         public Pointer<DbPage> Pages { get => _acc.Pointer.As<DbPage>(); }
 
         //public Span<DbPage> Pages => MemoryMarshal.Cast<byte, DbPage>(_acc.Bytes);
         //public Span<DbRowDataPage> DataPages => MemoryMarshal.Cast<byte, DbRowDataPage>(_acc.Bytes);
-        public unsafe DbRowDataPage* GetDataPages()
+        public P* GetPages<P>() where P: unmanaged, IDbPage
         {
-            return (DbRowDataPage*)(byte*)_acc.Pointer;
+            return (P*)(byte*)_acc.Pointer;
         }
 
         private void CheckDb(ref DatabaseFile file)
@@ -119,7 +188,7 @@ namespace Mordent.Core
                 throw new InvalidOperationException("Invalid file format tag found");
         }
 
-        private unsafe void InitDb(ref DatabaseFile file)
+        private void InitDb(ref DatabaseFile file)
         {
             PageCount = 6;
             file.FileHeader.Tag = MordentDataTag; // Mordent
@@ -148,14 +217,14 @@ namespace Mordent.Core
             file.SgamPage1[0] = true; // first extent mixed
 
             file.BootPage.Header.Type = DbPageType.Heap;
-            GetDataPages()[5].Header.Type = DbPageType.Heap;
-            GetDataPages()[5].Header.PrevPageNo = 0;
-            GetDataPages()[5].Header.NextPageNo = 0;
+            GetPages<DbPage>()[5].Header.Type = DbPageType.Heap;
+            GetPages<DbPage>()[5].Header.PrevPageNo = 0;
+            GetPages<DbPage>()[5].Header.NextPageNo = 0;
             AddRow(5, BuildTablesTable());
 
-            GetDataPages()[6].Header.Type = DbPageType.Heap;
-            GetDataPages()[6].Header.PrevPageNo = 0;
-            GetDataPages()[6].Header.NextPageNo = 0;
+            GetPages<DbPage>()[6].Header.Type = DbPageType.Heap;
+            GetPages<DbPage>()[6].Header.PrevPageNo = 0;
+            GetPages<DbPage>()[6].Header.NextPageNo = 0;
             AddRow(6, new TableField(TablesTableId, "Id", "System.Guid"));
             AddRow(6, new TableField(TablesTableId, "Name", "System.String"));
             AddRow(6, new TableField(TablesTableId, "FirstPage", "System.Int32"));
@@ -208,17 +277,13 @@ namespace Mordent.Core
             }
         }
 
-        public unsafe DbExtentAllocPage* GetGamPageRefForPage(ref int extentNo)
+        public DbExtentAllocPage* GetGamPageRefForExtent(ref int extentNo)
         {
-            int gamPageNo = extentNo / DbExtentAllocPage.ExtentsCount;
-            extentNo = gamPageNo % DbExtentAllocPage.ExtentsCount;
-            if (gamPageNo == 0)
-                gamPageNo = 2;
-            Debug.Assert(GetDataPages()[gamPageNo].Header.Type == DbPageType.GlobalAllocationMap, "Reading a non-GAM page as GAM!");
-            return (DbExtentAllocPage*)GetDataPages() + gamPageNo;
-
+            int gamPageNo = (extentNo / DbExtentAllocPage.ExtentsCount)* DbExtentAllocPage.ExtentsCount + 1;
+            extentNo = extentNo % DbExtentAllocPage.ExtentsCount;
+            return GetPagePtr<DbExtentAllocPage>(gamPageNo);
         }
-        public unsafe DbRowId AddRow(string tableName, IDbSerializable rowData)
+        public DbRowId AddRow(string tableName, IDbSerializable rowData)
         {
             var t = FindTable(tableName);
             Debug.Assert(t != null, $"Couldn't find table {tableName}");
@@ -237,7 +302,7 @@ namespace Mordent.Core
             }
             return DbRowId.None; //TODO: fix
         }
-        public unsafe DbRowId AddRow(int pageNo, IDbSerializable rowData)
+        public DbRowId AddRow(int pageNo, IDbSerializable rowData)
         {
             var pagePtr = GetDataPagePtr(pageNo);
             Debug.Assert(pagePtr->FreeSpace >= rowData.FixedDataSize, "Not enough space to store requested data on this page");
@@ -297,29 +362,34 @@ namespace Mordent.Core
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe Span<byte> GetPageRowData(DbRowId rowId)
+        public Span<byte> GetPageRowData(DbRowId rowId)
         {
             return _acc.Bytes.Slice(rowId.PageNo << DbPage.SizeLog + GetDataPagePtr(rowId)->GetSlotOffset(rowId.SlotNo));
         }
 
-        public unsafe DbRowDataPage* GetDataPagePtr(int pageNo)
+        public P* GetPagePtr<P>(int pageNo) where P: unmanaged, IDbPage
         {
-            if (pageNo <= 0)
+            if (pageNo < 0)
                 throw new ArgumentOutOfRangeException(nameof(pageNo), "Negative pageNo detected");
+            return GetPages<P>() + pageNo;
 
-            Debug.Assert(GetDataPages()[pageNo].Header.Type == DbPageType.Heap, "Reading a non-data page as data!");
+        }
+        public DbRowDataPage* GetDataPagePtr(int pageNo)
+        {
 
-            return GetDataPages() + pageNo;
+            Debug.Assert(GetPages<DbRowDataPage>()[pageNo].Header.Type == DbPageType.Heap, "Reading a non-data page as data!");
+
+            return GetPages<DbRowDataPage>() + pageNo;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe DbRowDataPage* GetDataPagePtr(DbRowId rowId)
+        public DbRowDataPage* GetDataPagePtr(DbRowId rowId)
         {
             Debug.Assert(rowId.FileNo == 0, "Broken RowID with a non-zero file ID. Only one file is supported yet");
             return GetDataPagePtr(rowId.PageNo);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe DbRowId GetNext(DbRowId rowId)
+        public DbRowId GetNext(DbRowId rowId)
         {
             var slotNo = rowId.SlotNo++;
             if (slotNo < GetDataPagePtr(rowId)->Header.DataCount)
@@ -329,7 +399,7 @@ namespace Mordent.Core
                 return new DbRowId(GetDataPagePtr(rowId)->Header.NextPageNo, 0);
 
         }
-        public unsafe DbRowId GetPrev(DbRowId rowId)
+        public DbRowId GetPrev(DbRowId rowId)
         {
             var slotNo = rowId.SlotNo;
             if (slotNo > 0)
@@ -354,7 +424,7 @@ namespace Mordent.Core
             // tables table is always starting with the Page 5
             return new DbRowId(5, 0);
         }
-        public unsafe string GetString(StringHeader* headerPtr)
+        public string GetString(StringHeader* headerPtr)
         {
             var b = new StringBuilder(headerPtr->Length);
             var h = &headerPtr->FirstSegmentHeader;
