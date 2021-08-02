@@ -34,13 +34,7 @@ Ok, let's go. Here is the list of design ideas that are floating around in my he
 2. We will require x64 to avoid the addressability issues.
 3. The engine would generate the struct types for storing the user-defined data automatically, during the schema load.
 4. When processing a query expressed in terms of the user-defined and user-visible types, the engine would convert it to the "query plan" which is an imperative code implemented in terms of the internal struct types.
-5. TODO: verify the CLR representability of the "rubber struct", i.e. the struct of "header + array of items":
-   ```csharp
-   public struct Database 
-   {
-     public DbHeaderPage Header;
-     private DbDataPage Page1;
-     public Span<DbDataPage> DataPages {get;}
-   }
-   ```
+5. The database structure would be represented as a memory-mapped file, treated as an array of DbPages.
+   1. Most operations on database would receive the ```Span<DbPage>``` parameter, and operate on that span. (TODO: verify the performance penalties for the range-checking; expectation is to have those negligibly small)
+   2. Different types of DbPages will coexist in a form of "Union", i.e. internal blocks explicily overlayed via the ```FieldOffset``` attribute. This is to avoid casts between various ```Span<DbPageXXX>``` types
    
