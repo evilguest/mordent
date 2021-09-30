@@ -25,16 +25,13 @@ namespace Mordent.Core
             Type = string.IsNullOrWhiteSpace(type) ? throw new ArgumentException($"'{nameof(type)}' cannot be null or whitespace.", nameof(type)) : type;
         }
 
-        public override short Write(Span<byte> space, short dataItem)
+        public override short Write(Span<byte> space, short dataItem, IDbPageManager allocator)
         {
             switch (dataItem)
             {
                 case 2:
-                    MemoryMarshal.Cast<byte, int>(space)[0] = Type.Length;
-                    var charSpace = MemoryMarshal.Cast<byte, char>(space.Slice(sizeof(int)));
-                    Type.AsSpan().CopyTo(charSpace);
-                    return (short)StringSize(Type);
-                default: return base.Write(space, dataItem);
+                    return allocator.WriteString(space, Type);
+                default: return base.Write(space, dataItem, allocator);
             }
         }
     }

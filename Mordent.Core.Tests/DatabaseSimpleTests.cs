@@ -12,7 +12,7 @@ namespace Mordent.Core.Tests
             var fname = System.IO.Path.GetTempFileName();
 //            File.Delete(fname);
             using (new Database(fname, true)); // create db
-            using (new Database(fname, false)) ; // verify it reads back
+            using (new Database(fname, false)); // verify it reads back
         }
     }
 }

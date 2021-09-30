@@ -6,7 +6,7 @@ This is an open-source research project startign from scratch.
 I am  going to start with writing down the ideas behind this system; and, eventually, build some code to implement those ideas.
 
 ## Manifesto
-Ok, let's go. Here is the list of design ideas that are floating around in my head:
+Here is the list of design ideas that are floating around in my head:
 ### External surface
 1. The server would expose everything via RESTful API. 
    **Undecided yet**: how to express the query part. ODATA? RQL? custom?
@@ -37,4 +37,5 @@ Ok, let's go. Here is the list of design ideas that are floating around in my he
 5. The database structure would be represented as a memory-mapped file, treated as an array of DbPages.
    1. Most operations on database would receive the ```Span<DbPage>``` parameter, and operate on that span. (TODO: verify the performance penalties for the range-checking; expectation is to have those negligibly small)
    2. Different types of DbPages will coexist in a form of "Union", i.e. internal blocks explicily overlayed via the ```FieldOffset``` attribute. This is to avoid casts between various ```Span<DbPageXXX>``` types
-   
+6. Strings would be stored in form of an in-row prefix, optionally followed by the B+-Tree based implementation. See [strings.md](./strings.md) for detail
+

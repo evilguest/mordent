@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Mordent.Core
 {
@@ -8,19 +9,14 @@ namespace Mordent.Core
     {
         private F _fixedData;
 
-        public short FixedDataSize
-        {
-            get
-            {
-                return (short)Marshal.SizeOf(default(F));
-            }
-        }
+        public short FixedDataSize => (short)Marshal.SizeOf<F>();
+        public short MinDataSize => FixedDataSize;
 
         public virtual int TotalDataSize => FixedDataSize;
 
         public virtual IEnumerable<short> DataItems => Array.Empty<short>();
 
-        public unsafe virtual short Write(Span<byte> space, short dataItem)
+        public unsafe virtual short Write(Span<byte> space, short dataItem, IDbPageManager allocator)
         {
             switch (dataItem)
             {
@@ -32,6 +28,15 @@ namespace Mordent.Core
             }
         }
         public ref F Value => ref _fixedData;
-        public static int StringSize(string s) => sizeof(int) + s.Length * sizeof(char);
+        public static int StringSize(string s) => 2 + Encoding.UTF8.GetByteCount(s);
+        public int GetDataItemSize(short dataItem)
+        {
+            switch (dataItem)
+            {
+                case 0:
+                    return FixedDataSize;
+                default: throw new ArgumentOutOfRangeException(nameof(dataItem), "Trying to access an inexistent item");
+            }
+        }
     }
 }

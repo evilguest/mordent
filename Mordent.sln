@@ -7,7 +7,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mordent.Core", "Mordent.Cor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mordent.WebAPI", "Mordent.WebAPI\Mordent.WebAPI.csproj", "{E218807D-EB76-4A0A-8706-E2C3A11CFCB1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mordent.Core.Tests", "Mordent.Core.Tests\Mordent.Core.Tests.csproj", "{A987E149-0851-44C8-ACEA-31EB5DDF355F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Mordent.Core.Tests", "Mordent.Core.Tests\Mordent.Core.Tests.csproj", "{A987E149-0851-44C8-ACEA-31EB5DDF355F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{9488D990-7787-4254-B177-2DAC10141909}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+		strings.md = strings.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -7,13 +7,14 @@ namespace Mordent.Core
         public struct Fixed
         {
             public Guid Id;
-            public int FirstPage;
-            public int LastPage;
+            public DbPageId FirstPage;
+            public DbPageId LastPage;
         }
-        public Table(Guid id, int firstPage, int lastPage) 
+        public Table(in Fixed value) => Value = value;
+        public Table(Guid id, DbPageId firstPage, DbPageId lastPage) 
             => (Value.Id, Value.FirstPage, Value.LastPage) = (id, firstPage, lastPage);
         public ref Guid Id => ref Value.Id;
-        public ref int FirstPage => ref Value.FirstPage;
-        public ref int LastPage => ref Value.LastPage;
+        public ref DbPageId FirstPage => ref Value.FirstPage;
+        public ref DbPageId LastPage => ref Value.LastPage;
     }
 }
