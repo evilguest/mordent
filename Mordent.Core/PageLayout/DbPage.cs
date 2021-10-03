@@ -56,28 +56,8 @@ namespace Mordent.Core
         public FileHeaderPayload FileHeader;
         [FieldOffset(DbPageHeader.Size)]
         public LogPayload Log;
-        public void InitAsPfPage() => Header.Type = DbPageType.FreeSpace;
 
-        public void InitAsGamPage()
-        {
-            Header.Type = DbPageType.GlobalAllocationMap;
-            ExtentAlloc.Initialize(true);
-        }
-        public void InitAsSGamPage()
-        {
-            Header.Type = DbPageType.SharedAllocationMap;
-            ExtentAlloc.Initialize(false);
-        }
-        internal void InitAsFileHeaderPage()
-        {
-            Header.Type = DbPageType.FileHeader;
-            FileHeader.Tag = FileHeaderPayload.MordentDataTag; // Mordent
-            FileHeader.Version = 0x0000_0001;
-            FileHeader.Type = 42; // data file
-            FileHeader.MaxPagesGrowth = int.MaxValue;
-            FileHeader.RedoStartLSN = 8;
-        }
-        internal void InitAsLogPage()
+        public void InitAsLogPage()
         {
             Header.Type = DbPageType.Log;
             Log.Reset();

@@ -19,6 +19,7 @@ namespace Mordent.Core
     }
     public partial struct DbPage
     {
+        public void InitAsPfPage() => Header.Type = DbPageType.FreeSpace;
         [StructLayout(LayoutKind.Sequential)]
         public unsafe struct AllocPagePayload
         {

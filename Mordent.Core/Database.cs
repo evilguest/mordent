@@ -42,7 +42,7 @@ namespace Mordent.Core
         private void CheckDb()
         {
             var pages = _pageManager;
-            if (pages[0, 3].FileHeader.Tag != FileHeaderPayload.MordentDataTag)
+            if (pages[0, 3].FileHeader.Tag != DbPage.FileHeaderPayload.MordentDataTag)
                 throw new InvalidOperationException("Invalid file format tag found");
             if (pages[0, 0].Header.Type != DbPageType.FreeSpace)
                 throw new InvalidOperationException("Invalid first page format");

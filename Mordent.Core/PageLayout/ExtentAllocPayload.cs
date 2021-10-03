@@ -5,6 +5,17 @@ namespace Mordent.Core
 {
     public partial struct DbPage
     {
+        public void InitAsGamPage()
+        {
+            Header.Type = DbPageType.GlobalAllocationMap;
+            ExtentAlloc.Initialize(true);
+        }
+        public void InitAsSGamPage()
+        {
+            Header.Type = DbPageType.SharedAllocationMap;
+            ExtentAlloc.Initialize(false);
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         public unsafe struct ExtentAllocPayload
         {
@@ -85,14 +96,6 @@ namespace Mordent.Core
         }
 
         internal void InitAsFreeSpace() => Header.Type = DbPageType.FreeSpace;
-
-        internal void InitAsHeap()
-        {
-            Header.Type = DbPageType.Heap;
-            RowData.Header.DataCount = 0;
-            RowData.Header.NextPageId = DbPageId.None;
-            RowData.Header.PrevPageId = DbPageId.None;
-        }
 
     }
     public unsafe interface IDatabaseHardware

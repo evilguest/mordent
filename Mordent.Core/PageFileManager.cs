@@ -37,7 +37,7 @@ namespace Mordent.Core
                 _fileStream.Position = pageNo * _pageSize;
                 
                 if (_fileStream.Read(MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref page, 1))) < _pageSize)
-                    throw new Exception($"Failed to read the page {pageNo} from the file {_filePath}");
+                    throw new ArgumentOutOfRangeException(nameof(pageNo), pageNo, $"Failed to read the page {pageNo} from the file {_filePath}");
             }
         }
 

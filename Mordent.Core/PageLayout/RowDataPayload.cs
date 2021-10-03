@@ -6,6 +6,15 @@ using System.Runtime.InteropServices;
 namespace Mordent.Core
 {
     public partial struct DbPage {
+        public void InitAsHeap()
+        {
+            Header.Type = DbPageType.Heap;
+            RowData.Header.DataCount = 0;
+            RowData.Header.NextPageId = DbPageId.None;
+            RowData.Header.PrevPageId = DbPageId.None;
+        }
+
+
 
         [StructLayout(LayoutKind.Sequential, Pack = 2, Size = DataPageHeader.Size)]
         public struct DataPageHeader
