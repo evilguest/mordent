@@ -12,7 +12,7 @@ namespace Mordent.Core
             FileHeader.Version = 0x0000_0001;
             FileHeader.Type = 42; // data file
             FileHeader.MaxPagesGrowth = int.MaxValue;
-            FileHeader.RedoStartLSN = 8;
+            FileHeader.RedoStartLSN = new(0);
         }
 
         [StructLayout(LayoutKind.Sequential, Pack = 2, Size = DbPage.Size)]
@@ -23,7 +23,7 @@ namespace Mordent.Core
             public ulong Tag;
             public uint Version; // file format version
             public uint Type; // file type
-            public ulong RedoStartLSN;
+            public Lsn  RedoStartLSN;
             public int MaxPagesGrowth;
             public int AvailablePages;
         }

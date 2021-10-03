@@ -15,13 +15,12 @@ namespace Mordent.Core
             Header.Type = DbPageType.SharedAllocationMap;
             ExtentAlloc.Initialize(false);
         }
-
         [StructLayout(LayoutKind.Sequential)]
         public unsafe struct ExtentAllocPayload
         {
-            private const int Capacity = (DbPage.Size - DbPageHeader.Size) / sizeof(PageAllocationStatus);
+            private const int Capacity = (DbPage.Size - DbPageHeader.Size);
             public const int PagesPerExtent = 8;
-            public const int ExtentsCapacity = Capacity * sizeof(byte); // one bit per extent
+            public const int ExtentsCapacity = Capacity * 8; // one bit per extent
             internal fixed byte _extentStatus[Capacity];
             /// <summary>
             /// Reports whether the requested extent is free
@@ -30,13 +29,13 @@ namespace Mordent.Core
             /// <returns></returns>
             public bool this[int extentIndex]
             {
-                get => (_extentStatus[extentIndex >> 3] & (1 << extentIndex & 0b111)) != 0;
+                get => (_extentStatus[extentIndex >> 3] & (1 << (extentIndex & 0b111))) != 0;
                 set
                 {
                     if (value)
-                        _extentStatus[extentIndex >> 3] |= (byte)(1 << extentIndex & 0b111);
+                        _extentStatus[extentIndex >> 3] |= (byte)(1 << (extentIndex & 0b111));
                     else
-                        _extentStatus[extentIndex >> 3] &= (byte)~(1 << extentIndex & 0b111);
+                        _extentStatus[extentIndex >> 3] &= (byte)~(1 << (extentIndex & 0b111));
 
                 }
             }
@@ -77,7 +76,7 @@ namespace Mordent.Core
                             var j = 0;
                             while ((b & (1 << j)) == 0)
                                 j++;
-                            return i << 3 + j;
+                            return (i << 3) + j;
                         }
                     }
                     return -1;

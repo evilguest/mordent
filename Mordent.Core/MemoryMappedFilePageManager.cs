@@ -148,9 +148,9 @@ namespace Mordent.Core
 
         private (int pfPageNo, ushort pageSlotNo) GetPFPageForPage(int pageNum)
         {
-            Debug.Assert(this[pageNum / DbPage.AllocPagePayload.PagesCapacity].Header.Type == DbPageType.FreeSpace, "Invalid PF page type");
+            Debug.Assert(this[pageNum / DbPage.PageAllocPayload.PagesCapacity].Header.Type == DbPageType.FreeSpace, "Invalid PF page type");
 
-            return (pageNum / DbPage.AllocPagePayload.PagesCapacity, (ushort)(pageNum % DbPage.AllocPagePayload.PagesCapacity));
+            return (pageNum / DbPage.PageAllocPayload.PagesCapacity, (ushort)(pageNum % DbPage.PageAllocPayload.PagesCapacity));
         }
 
 
@@ -169,12 +169,12 @@ namespace Mordent.Core
 
         public void InitAllocationPages(int oldExtentsCount)
         {
-            var firstNewPF = oldExtentsCount == 0 ? 0 : (oldExtentsCount * DbPage.ExtentAllocPayload.PagesPerExtent) / DbPage.AllocPagePayload.PagesCapacity + 1;
-            var lastNewPF = (ExtentsCount * DbPage.ExtentAllocPayload.PagesPerExtent) / DbPage.AllocPagePayload.PagesCapacity;
+            var firstNewPF = oldExtentsCount == 0 ? 0 : (oldExtentsCount * DbPage.ExtentAllocPayload.PagesPerExtent) / DbPage.PageAllocPayload.PagesCapacity + 1;
+            var lastNewPF = (ExtentsCount * DbPage.ExtentAllocPayload.PagesPerExtent) / DbPage.PageAllocPayload.PagesCapacity;
             var c = 0;
             for (var i = firstNewPF; i <= lastNewPF; i++) // this cycle would be empty if we aren't crossing the PF boundary
             {
-                int newPFPageNum = i * DbPage.AllocPagePayload.PagesCapacity;
+                int newPFPageNum = i * DbPage.PageAllocPayload.PagesCapacity;
                 this[newPFPageNum].InitAsPfPage();
                 c++;
                 if (i % (DbPage.ExtentAllocPayload.PagesPerExtent * sizeof(byte)) == 0) // time to add GAM/SGAM

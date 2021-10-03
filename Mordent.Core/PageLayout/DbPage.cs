@@ -18,21 +18,6 @@ namespace Mordent.Core
         public const int Size = 2;
         public DbPageType Type;
     }
-    public struct DbRowReference
-    {
-        private long _data;
-        public long PageNo
-        {
-            get => _data >> 14;
-            set => _data = _data & (DbPage.Size - 1) | value << DbPage.SizeLog;
-        }
-        public short RowNo
-        {
-            get => (short)(_data & (DbPage.Size - 1));
-            set => _data = (_data & ~DbPage.SizeMask) | (value & DbPage.SizeMask);
-        }
-    }
-
     [StructLayout(LayoutKind.Explicit, Size = DbPage.Size)]
     public partial struct DbPage 
     {
@@ -47,7 +32,7 @@ namespace Mordent.Core
         public ExtentAllocPayload ExtentAlloc;
 
         [FieldOffset(DbPageHeader.Size)]
-        public AllocPagePayload PageAlloc;
+        public PageAllocPayload PageAlloc;
 
         [FieldOffset(DbPageHeader.Size)]
         public RowDataPayload RowData;

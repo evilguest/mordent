@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Mordent.Core
@@ -20,8 +21,9 @@ namespace Mordent.Core
     public partial struct DbPage
     {
         public void InitAsPfPage() => Header.Type = DbPageType.FreeSpace;
+
         [StructLayout(LayoutKind.Sequential)]
-        public unsafe struct AllocPagePayload
+        public unsafe struct PageAllocPayload
         {
             public const int PagesCapacity = (DbPage.Size - DbPageHeader.Size) / sizeof(PageAllocationStatus);
             private fixed byte _pageStatus[PagesCapacity];
@@ -38,9 +40,10 @@ namespace Mordent.Core
             /// <returns>The number (0 to 7) of the page within extent</returns>
             public int FindFirstNonAllocatedPage(int extentNumber)
             {
-                fixed (AllocPagePayload* pagePtr = &this)
+                fixed (PageAllocPayload* pagePtr = &this)
                     return new ReadOnlySpan<byte>(pagePtr->_pageStatus + extentNumber * 8, 8).IndexOf((byte)0);
             }
+
         }
     }
 }
