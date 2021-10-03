@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Mordent.Core
 {
+
     public class MemoryMappedFilePageManager : IFilePageManager
     {
         private object __fileLock = new(); // used for locking

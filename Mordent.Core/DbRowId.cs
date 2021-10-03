@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace Mordent.Core
 {
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
-    [DebuggerDisplay("{FileNo}:{PageNo}:{SlotNo}")]
+    [DebuggerDisplay("{DebuggerDisplay, nq")]
     public readonly struct DbRowId
     {
         public readonly int PageNo;
@@ -19,6 +19,7 @@ namespace Mordent.Core
         public DbRowId(DbPageId pageId, short slotNo) : this(pageId.FileNo, pageId.PageNo, slotNo) { }
 
         public DbRowId(ushort fileNo, int pageNo, short slotNo) => (PageNo, FileNo, SlotNo) = (pageNo, fileNo, slotNo);
+        private string DebuggerDisplay => ToString();
         public override string ToString() => $"{FileNo}:{PageNo}:{SlotNo}";
     }
 }

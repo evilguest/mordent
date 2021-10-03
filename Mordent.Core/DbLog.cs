@@ -11,25 +11,14 @@ namespace Mordent.Core
     {
         internal static unsafe void Write<T>(this BinaryWriter writer, in T data)
             where T : unmanaged => writer.Write(new ReadOnlySpan<byte>(Unsafe.AsPointer(ref Unsafe.AsRef(in data)), sizeof(T)));
-        internal static void Write(this BinaryWriter writer, DbLog.LogRecordType logRecordType)
+        internal static void Write(this BinaryWriter writer, LogRecordType logRecordType)
             => writer.Write((byte)logRecordType);
     }
     public class DbLog : ILog
     {
         private readonly object _syncRoot = new object();
-        internal enum LogRecordType : byte
-        {
-            None,
-            TranStart,
-            TranCommit,
-            TranRollback,
-            CheckPointStart,
-            CheckpointEnd,
-            ChangeRow,
-            ChangeKey
-        };
         private BinaryWriter LogWriter { get; }
-        private ISet<Guid> ActiveTransactions { get; } = new HashSet<Guid>();
+        private ISet<DbTranId> ActiveTransactions { get; } = new HashSet<DbTranId>();
         public DbLog(string fileName) : this(
             File.OpenWrite(
                 string.IsNullOrWhiteSpace(fileName) 
@@ -38,7 +27,7 @@ namespace Mordent.Core
         public DbLog(Stream logStream) : this(new BinaryWriter(logStream ?? throw new ArgumentNullException(nameof(logStream)))) { }
         public DbLog(BinaryWriter writer) => LogWriter = writer ?? throw new ArgumentNullException(nameof(writer));
 
-        public void StartTransaction(Guid transactionId)
+        public void StartTransaction(DbTranId transactionId)
         {
             lock (_syncRoot)
             {
@@ -51,7 +40,7 @@ namespace Mordent.Core
             }
         }
 
-        public void CommitTransaction(Guid transactionId)
+        public void CommitTransaction(DbTranId transactionId)
         {
             lock (_syncRoot)
             {
@@ -65,7 +54,7 @@ namespace Mordent.Core
         }
 
 
-        public void RecordChange(Guid transactionId, object oldData, object newData)
+        public void RecordChange(DbTranId transactionId, object oldData, object newData)
         {
             lock (_syncRoot)
             {
@@ -75,23 +64,23 @@ namespace Mordent.Core
 
         public void StartCheckPoint()
         {
-            lock(_syncRoot)
-            {
-                LogWriter.Write(LogRecordType.CheckPointStart);
-                LogWriter.Write(ActiveTransactions.Count);
-                foreach (var t in ActiveTransactions)
-                    LogWriter.Write(t);
-                LogWriter.Flush();
-            }
+            //lock(_syncRoot)
+            //{
+            //    LogWriter.Write(LogRecordType.CheckPointStart);
+            //    LogWriter.Write(ActiveTransactions.Count);
+            //    foreach (var t in ActiveTransactions)
+            //        LogWriter.Write(t);
+            //    LogWriter.Flush();
+            //}
         }
 
         public void EndCheckPoint()
         {
-            lock (_syncRoot)
-            {
-                LogWriter.Write(LogRecordType.CheckpointEnd);
-                LogWriter.Flush();
-            }
+            //lock (_syncRoot)
+            //{
+            //    LogWriter.Write(LogRecordType.CheckpointEnd);
+            //    LogWriter.Flush();
+            //}
         }
     }
 }

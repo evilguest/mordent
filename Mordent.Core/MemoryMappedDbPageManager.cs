@@ -32,7 +32,7 @@ namespace Mordent.Core
         public static int PagesToExtents(int pages) => pages == 0 ? 0 : (pages - 1) / DbPage.ExtentAllocPayload.PagesPerExtent + 1;
 
 
-        public DbPageId AllocatePage()
+        public DbPageId AllocatePage()  
         {
             return AllocatePage(DbPageId.None);
         }
@@ -64,6 +64,11 @@ namespace Mordent.Core
         public void CreateFile(short fileNo, string filePath)
         {
             throw new NotImplementedException();
+        }
+
+        public void FlushAll(DbTranId tranId)
+        {
+            ; // intentionally does nothing
         }
 
         public void FreePage(DbPageId pageId)

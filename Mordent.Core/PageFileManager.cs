@@ -50,4 +50,8 @@ namespace Mordent.Core
             }
         }
     }
+    public struct PageFileManagerFactory : IFileManagerFactory<PageFileManager>
+    {
+        public PageFileManager Create(string filePath) => new PageFileManager(filePath);
+    }
 }

@@ -27,7 +27,7 @@ namespace Mordent.Core
             }
         }
 
-        public IEnumerable<IReadOnlyList<byte>> Records
+        public IEnumerable<byte[]> Records
         {
             get
             {
@@ -36,7 +36,7 @@ namespace Mordent.Core
             }
         }
 
-        private IEnumerable<IReadOnlyList<byte>> IterateRecords(IFileManager logStream, int startPage)
+        private IEnumerable<byte[]> IterateRecords(IFileManager logStream, int startPage)
         {
             var page = new DbPage();
             for (var currentPage = startPage; currentPage >= 0; currentPage--)

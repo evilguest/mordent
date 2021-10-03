@@ -26,5 +26,6 @@ namespace Mordent.Core
         public static bool operator !=(DbPageId left, DbPageId right) => !(left == right);
         //public static implicit operator DbPageId((int fileNo, int pageNo) t) => new DbPageId((ushort)t.fileNo, t.pageNo);
         //public static implicit operator DbPageId((ushort fileNo, int pageNo) t) => new DbPageId(t.fileNo, t.pageNo);
+        public override string ToString() => $"{FileNo}:{PageNo}";
     }
 }

@@ -6,5 +6,6 @@
         public void CreateFile(short fileNo, string filePath);
         public long AvailablePages { get; }
         public ref DbPage this[ushort fileNo, int pageNo] => ref this[new DbPageId(fileNo, pageNo)];
+        public void FlushAll(DbTranId tranId);
     }
 }

@@ -6,6 +6,8 @@ namespace Mordent.Core
     public readonly struct Lsn: IComparable<Lsn>, IEquatable<Lsn>
     {
         private readonly long _value;
+        internal static readonly Lsn None = new Lsn(-1);
+
         public Lsn(long value) => _value = value;
 
         public int CompareTo(Lsn other) => _value.CompareTo(other);
@@ -36,14 +38,14 @@ namespace Mordent.Core
     {
         public Lsn Append(ReadOnlySpan<byte> data);
         public void Flush(Lsn upToLsn);
-        public IEnumerable<IReadOnlyList<byte>> Records { get; }
+        public IEnumerable<byte[]> Records { get; }
     }
 
     public interface ILog
     {
-        public void StartTransaction(Guid transactionId);
-        public void CommitTransaction(Guid transactionId);
-        public void RecordChange(Guid transactionId, object oldData, object newData);
+        public void StartTransaction(DbTranId tranId);
+        public void CommitTransaction(DbTranId tranId);
+        public void RecordChange(DbTranId tranId, object oldData, object newData);
         public void StartCheckPoint();
         public void EndCheckPoint();
 
