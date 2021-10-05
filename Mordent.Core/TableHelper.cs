@@ -13,7 +13,7 @@ namespace Mordent.Core
 
             for (var pageId = t.FirstPage; pageId != DbPageId.None; pageId = pages[pageId].RowData.Header.NextPageId)
             {
-                for (short rowNo = 0; rowNo < pages[pageId].RowData.Header.DataCount; rowNo++)
+                for (ushort rowNo = 0; rowNo < pages[pageId].RowData.Header.DataCount; rowNo++)
                 {
                     var r = pages[pageId].RowData.GetSlotSpan(rowNo);
                     if (predicate(pages, r))

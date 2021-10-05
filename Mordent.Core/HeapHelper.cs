@@ -28,7 +28,7 @@ namespace Mordent.Core
                 // TODO: implement
                 throw new NotImplementedException("The row overflow is not implemented yet");
             }
-            var rowId = new DbRowId(pageId, pages[pageId].RowData.AddSlot((short)rowData.TotalDataSize));
+            var rowId = new DbRowId(pageId, pages[pageId].RowData.AddSlot((ushort)rowData.TotalDataSize));
             pages.WriteHeapRow(rowId, rowData);
             return rowId;
         }

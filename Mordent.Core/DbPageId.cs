@@ -8,10 +8,12 @@ namespace Mordent.Core
     [DebuggerDisplay("{FileNo}:{PageNo}")]
     public readonly struct DbPageId : IEquatable<DbPageId>
     {
+        public const int Size = sizeof(int) + sizeof(ushort);
         public readonly int PageNo;
         public readonly ushort FileNo;
         public static DbPageId None = new DbPageId();
         public static DbPageId NotInit = new DbPageId(0, -1);
+
 
         public DbPageId(ushort fileNo, int pageNo) => (PageNo, FileNo) = (pageNo, fileNo);
 

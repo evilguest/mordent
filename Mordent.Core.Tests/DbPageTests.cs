@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System;
+using Xunit;
 
 namespace Mordent.Core.Tests
 {
@@ -53,6 +54,50 @@ namespace Mordent.Core.Tests
             for (var e = 0; e < DbPage.ExtentAllocPayload.ExtentsCapacity; e++)
                 p.ExtentAlloc[e] = false;
             Assert.Equal(-1, p.ExtentAlloc.FindFirstFreeExtent());
+        }
+        [Fact]
+        public void TestSGam()
+        {
+            var p = new DbPage();
+            p.InitAsSGamPage();
+            Assert.Equal(DbPageType.SharedAllocationMap, p.Header.Type);
+            Assert.Equal(-1, p.ExtentAlloc.FindFirstFreeExtent()); // by default, SGAM map is empty.
+            p.ExtentAlloc[2] = true;
+            Assert.Equal(2, p.ExtentAlloc.FindFirstFreeExtent());
+            p.ExtentAlloc[0] = true;
+            Assert.Equal(0, p.ExtentAlloc.FindFirstFreeExtent());
+            p.ExtentAlloc[1] = true;
+            Assert.Equal(0, p.ExtentAlloc.FindFirstFreeExtent());
+        }
+
+        [Fact]
+        public void TestHeap()
+        {
+            var p = new DbPage();
+            p.InitAsHeap();
+            #region Testing the freshly initied page
+            Assert.Equal(DbPageType.Heap, p.Header.Type);
+            Assert.Equal(0, p.RowData.Header.DataCount);
+            Assert.Equal(DbPageId.None, p.RowData.Header.NextPageId);
+            Assert.Equal(DbPageId.None, p.RowData.Header.PrevPageId);
+            Assert.Equal(DbPage.RowDataPayload.Capacity-2, p.RowData.FreeSpace);
+            #endregion
+
+            #region Testing behavior
+            Assert.Throws<ArgumentOutOfRangeException>("slotNo", () => p.RowData.RemoveRow(1));
+            Assert.Throws<ArgumentOutOfRangeException>("slotSize", ()=>p.RowData.AddSlot((ushort)(p.RowData.FreeSpace+1)));
+            Assert.Equal(0, p.RowData.AddSlot((ushort)p.RowData.FreeSpace)); // testing that it fits
+            Assert.Equal(DbPage.RowDataPayload.Capacity - 2, p.RowData.GetSlotSpan(0).Length);
+            Assert.Throws<ArgumentOutOfRangeException>("slotSize", () => p.RowData.AddSlot(0));
+            p.RowData.RemoveRow(0);
+            Assert.Equal(0, p.RowData.Header.DataCount);
+            Assert.Equal(DbPage.RowDataPayload.Capacity - 2, p.RowData.FreeSpace);
+            ushort slotSize1 = 100;
+            Assert.Equal(0, p.RowData.AddSlot(slotSize1));
+            ushort slotSize2 = 200;
+            Assert.Equal(1, p.RowData.AddSlot(slotSize2));
+            Assert.Equal(DbPage.RowDataPayload.Capacity - slotSize1 - slotSize2 - 6, p.RowData.FreeSpace);
+            #endregion
         }
     }
 }

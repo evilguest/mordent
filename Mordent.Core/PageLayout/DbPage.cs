@@ -42,11 +42,6 @@ namespace Mordent.Core
         [FieldOffset(DbPageHeader.Size)]
         public LogPayload Log;
 
-        public void InitAsLogPage()
-        {
-            Header.Type = DbPageType.Log;
-            Log.Reset();
-        }
 }
 
 

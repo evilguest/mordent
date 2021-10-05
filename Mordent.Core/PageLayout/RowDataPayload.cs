@@ -19,8 +19,8 @@ namespace Mordent.Core
         [StructLayout(LayoutKind.Sequential, Pack = 2, Size = DataPageHeader.Size)]
         public struct DataPageHeader
         {
-            public const int Size = 10;
-            public short DataCount;
+            public const int Size = sizeof(ushort) + DbPageId.Size + DbPageId.Size;
+            public ushort DataCount;
             public DbPageId PrevPageId;
             public DbPageId NextPageId;
         }
@@ -31,72 +31,83 @@ namespace Mordent.Core
         [StructLayout(LayoutKind.Explicit)]
         public unsafe struct RowDataPayload
         {
-            internal const short Capacity = (DbPage.Size - DbPageHeader.Size - DataPageHeader.Size);
-            internal const short MaxSlots = Capacity / sizeof(short);
+            public const ushort Capacity = (DbPage.Size - DbPageHeader.Size - DataPageHeader.Size);
+            public const ushort MaxSlots = Capacity / sizeof(short);
 
             [FieldOffset(0)]
             public DataPageHeader Header;
 
             [FieldOffset(DbPageHeader.Size)]
-            internal fixed short _rowOffsets[MaxSlots];
-            public Span<short> RowOffsets => MemoryMarshal.CreateSpan(ref _rowOffsets[0], MaxSlots);
+            internal fixed ushort _rowOffsets[MaxSlots];
+            public Span<ushort> RowOffsets => MemoryMarshal.CreateSpan(ref _rowOffsets[0], MaxSlots);
 
             [FieldOffset(DbPageHeader.Size)]
             internal byte _data;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal short GetSlotOffset(short slotNo)
+            internal ushort GetSlotOffset(ushort slotNo)
             {
                 return slotNo == 0 ? slotNo : RowOffsets[^slotNo];
             }
-            public Span<byte> GetSlotSpan(short slotNo)
+            public Span<byte> GetSlotSpan(ushort slotNo)
             {
                 fixed (byte* dataPtr = &_data)
                 {
                     var s = (slotNo < Header.DataCount)
-                        ? new Span<byte>(dataPtr, GetSlotOffset((short)(slotNo + 1)))
+                        ? new Span<byte>(dataPtr, GetSlotOffset((ushort)(slotNo + 1)))
                         : new Span<byte>(dataPtr, Capacity - (Header.DataCount * sizeof(short)));
                     return s.Slice(GetSlotOffset(slotNo));
                 }
             }
-            public unsafe void* GetSlotPtr(short slotNo)
+            //public unsafe void* GetSlotPtr(ushort slotNo)
+            //{
+            //    fixed (byte* dataPtr = &_data)
+            //        return dataPtr + GetSlotOffset(slotNo);
+            //}
+            //public ref T GetSlotAs<T>(ushort slotNo) where T : unmanaged
+            //{
+            //    fixed (byte* dataPtr = &_data)
+            //        return ref *(T*)(dataPtr + GetSlotOffset(slotNo));
+            //}
+            public ushort AddSlot(ushort slotSize)
             {
-                fixed (byte* dataPtr = &_data)
-                    return dataPtr + GetSlotOffset(slotNo);
-            }
-            public ref T GetSlotAs<T>(short slotNo) where T : unmanaged
-            {
-                fixed (byte* dataPtr = &_data)
-                    return ref *(T*)(dataPtr + GetSlotOffset(slotNo));
-            }
-            public short AddSlot(short slotSize)
-            {
-                // TODO: locks!
-                Debug.Assert(slotSize + 2 <= FreeSpace, $"An attempt to store row with size {slotSize} in the page with free space of {FreeSpace}");
+                if (slotSize > FreeSpace)
+                    throw new ArgumentOutOfRangeException(nameof(slotSize), slotSize, $"Attempt to allocate {slotSize} bytes at a page with {FreeSpace} bytes available");
                 var rowNo = Header.DataCount++;
                 var offset = GetSlotOffset(rowNo);
-                RowOffsets[^(rowNo+1)] = (short)(offset + slotSize);
+                RowOffsets[^(rowNo+1)] = (ushort)(offset + slotSize);
                 return rowNo;
             }
-            public short FreeSpace => Header.DataCount == 0
-                    ? Capacity
-                    : (short)(Capacity - (Header.DataCount * sizeof(short)) - RowOffsets[^(Header.DataCount+1)]);
+            public short FreeSpace
+            {
+                get
+                {
+                    var freeSpace = Capacity - Header.DataCount * sizeof(ushort);
+                    if (Header.DataCount > 0)
+                        freeSpace -= RowOffsets[^(Header.DataCount)];
+                     return (short)(freeSpace - sizeof(short));
+                }
+            }
 
-            public void RemoveRow(short slotNo)
+            public void RemoveRow(ushort slotNo)
             {
                 // TODO: locks!
-                if (slotNo + 1 < Header.DataCount) // not the last row
+                if (slotNo.Add(1) < Header.DataCount) // not the last row
                 {
                     var rowOffset = GetSlotOffset(slotNo);
-                    var nextRowOffset = RowOffsets[^(slotNo + 2)];
+                    var nextRowOffset = GetSlotOffset(slotNo.Add(1));
 
                     fixed (byte* dataPtr = &_data)
                         Buffer.MemoryCopy(dataPtr + nextRowOffset, dataPtr + rowOffset, FreeSpace - rowOffset, GetSlotOffset(Header.DataCount) - nextRowOffset);
 
                     for (int i = slotNo + 1; i < Header.DataCount; i++)
-                        RowOffsets[^(i+1)] = (short)(RowOffsets[^(i + 2)] + rowOffset - nextRowOffset);
+                        RowOffsets[^i] = (ushort)(RowOffsets[^(i + 1)] + rowOffset - nextRowOffset);
                     Header.DataCount--;
                 }
+                else if (slotNo.Add(1) == Header.DataCount) // the last row
+                    Header.DataCount--;
+                else
+                    throw new ArgumentOutOfRangeException(nameof(slotNo), slotNo, $"Trying to remove record # {slotNo + 1} of {Header.DataCount}");
             }
 
         }

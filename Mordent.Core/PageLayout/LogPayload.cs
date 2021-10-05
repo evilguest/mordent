@@ -5,6 +5,12 @@ namespace Mordent.Core
 {
     public partial struct DbPage
     {
+        public void InitAsLogPage()
+        {
+            Header.Type = DbPageType.Log;
+            Log.Reset();
+        }
+
         [StructLayout(LayoutKind.Sequential)]
         public unsafe struct LogPayload
         {
