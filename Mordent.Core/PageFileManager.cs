@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 
 namespace Mordent.Core
 {
-    public class PageFileManager : IFileManager
+    public class PageFileManager : IFileManager, IAsyncDisposable
     {
         private readonly int _pageSize = 1 << 14;
         private readonly object _sync = new();
         private readonly Stream _fileStream;
         private readonly string _filePath;
+        private bool _disposed;
 
         public PageFileManager(string filePath)
         {
@@ -48,6 +49,30 @@ namespace Mordent.Core
                 _fileStream.Position = pageNo * _pageSize;
                 _fileStream.Write(MemoryMarshal.AsBytes(MemoryMarshal.CreateSpan(ref page, 1)));
             }
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            lock(_sync)
+                if (!_disposed)
+                {
+                    if (disposing)
+                        _fileStream.Dispose();
+
+                    _disposed = true;
+                }
+        }
+
+        void IDisposable.Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await (_fileStream.DisposeAsync());
+            GC.SuppressFinalize(this);
         }
     }
     public struct PageFileManagerFactory : IFileManagerFactory<PageFileManager>

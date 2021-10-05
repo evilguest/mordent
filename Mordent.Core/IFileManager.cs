@@ -1,9 +1,11 @@
-﻿namespace Mordent.Core
+﻿using System;
+
+namespace Mordent.Core
 {
     /// <summary>
     /// Used only in the buffer-based implementation of the IPageManager.
     /// </summary>
-    public interface IFileManager
+    public interface IFileManager: IDisposable, IAsyncDisposable
     {
         public void ReadPage(int pageNo, ref DbPage page);
         public void WritePage(int pageNo, ref DbPage page);

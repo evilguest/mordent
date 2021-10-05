@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace Mordent.Core
 {
@@ -12,6 +13,8 @@ namespace Mordent.Core
         private Lsn _latestLSN;
         private Lsn _lastSavedLSN;
         private DbPage _logPage;
+        private bool _disposed;
+
         public LogFile(string filePath)
         {
             _logFilePath = filePath;
@@ -47,7 +50,7 @@ namespace Mordent.Core
                 {
                     var d = page.Log.Read(currentPos);
                     yield return d;
-                    currentPos += (short)d.Length;
+                    currentPos += (short)(d.Length+sizeof(short));
                 }
             }
         }
@@ -80,6 +83,29 @@ namespace Mordent.Core
         {
             _logStream.WritePage(_currentPageNo, ref _logPage);
             _lastSavedLSN = _latestLSN;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                    _logStream.Dispose();
+
+                _disposed = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _logStream.DisposeAsync();
+            GC.SuppressFinalize(this);
         }
     }
 }

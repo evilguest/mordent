@@ -40,9 +40,9 @@ namespace Mordent.Core
             internal byte[] Read(short currentPos)
             {
                 var a = AllData.Slice(currentPos);
-                var l = MemoryMarshal.Read<short>(a); a = a.Slice(sizeof(short));
+                var l = a.Read<short>(); 
                 var r = new byte[l];
-                a.Slice(0, l).CopyTo(r);
+                a[..l].CopyTo(r);
                 return r;
             }
         }

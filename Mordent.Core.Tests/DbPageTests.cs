@@ -97,6 +97,10 @@ namespace Mordent.Core.Tests
             ushort slotSize2 = 200;
             Assert.Equal(1, p.RowData.AddSlot(slotSize2));
             Assert.Equal(DbPage.RowDataPayload.Capacity - slotSize1 - slotSize2 - 6, p.RowData.FreeSpace);
+            Assert.Equal(slotSize1, p.RowData.GetSlotSpan(0).Length);
+            Assert.Equal(slotSize2, p.RowData.GetSlotSpan(1).Length);
+            p.RowData.RemoveRow(0);
+            Assert.Equal(DbPage.RowDataPayload.Capacity - slotSize2 - 4, p.RowData.FreeSpace);
             #endregion
         }
     }

@@ -44,20 +44,13 @@ namespace Mordent.Core
             [FieldOffset(DbPageHeader.Size)]
             internal byte _data;
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal ushort GetSlotOffset(ushort slotNo)
-            {
-                return slotNo == 0 ? slotNo : RowOffsets[^slotNo];
-            }
+//            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal ushort GetSlotOffset(ushort slotNo) => slotNo == 0 ? slotNo : RowOffsets[^slotNo];
+
             public Span<byte> GetSlotSpan(ushort slotNo)
             {
-                fixed (byte* dataPtr = &_data)
-                {
-                    var s = (slotNo < Header.DataCount)
-                        ? new Span<byte>(dataPtr, GetSlotOffset((ushort)(slotNo + 1)))
-                        : new Span<byte>(dataPtr, Capacity - (Header.DataCount * sizeof(short)));
-                    return s.Slice(GetSlotOffset(slotNo));
-                }
+                var s = MemoryMarshal.CreateSpan(ref _data, GetSlotOffset(slotNo.Add(1)));
+                return s.Slice(GetSlotOffset(slotNo));
             }
             //public unsafe void* GetSlotPtr(ushort slotNo)
             //{
@@ -75,7 +68,7 @@ namespace Mordent.Core
                     throw new ArgumentOutOfRangeException(nameof(slotSize), slotSize, $"Attempt to allocate {slotSize} bytes at a page with {FreeSpace} bytes available");
                 var rowNo = Header.DataCount++;
                 var offset = GetSlotOffset(rowNo);
-                RowOffsets[^(rowNo+1)] = (ushort)(offset + slotSize);
+                RowOffsets[^(rowNo+1)] = offset.Add(slotSize);
                 return rowNo;
             }
             public short FreeSpace
