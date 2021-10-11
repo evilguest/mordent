@@ -1,4 +1,6 @@
-﻿namespace Mordent.Core
+﻿using System;
+
+namespace Mordent.Core
 {
     public interface IBuffers
     {
@@ -8,5 +10,7 @@
         public void FlushAll(DbTranId tranId);
         public void Unpin(int bufferNo);
         public int Pin(DbPageId pageId);
+        public int PinNew();
+        public DbPageId GetPageId(int bufferNo);
     }
 }

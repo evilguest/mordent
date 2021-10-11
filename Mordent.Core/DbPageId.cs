@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 namespace Mordent.Core
 {
     [StructLayout(LayoutKind.Sequential, Pack = 2)]
-    [DebuggerDisplay("{FileNo}:{PageNo}")]
+    [DebuggerDisplay("{ToString(),nq}")]
     public readonly struct DbPageId : IEquatable<DbPageId>
     {
         public const int Size = sizeof(int) + sizeof(ushort);

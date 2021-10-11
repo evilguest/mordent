@@ -46,10 +46,14 @@ namespace Mordent.Core.Tests
             Assert.Equal(DbPageType.GlobalAllocationMap, p.Header.Type);
             Assert.Equal(0, p.ExtentAlloc.FindFirstFreeExtent());
             p.ExtentAlloc[0] = false;
+            Assert.False(p.ExtentAlloc[0]);
             Assert.Equal(1, p.ExtentAlloc.FindFirstFreeExtent());
             p.ExtentAlloc[2] = false;
+            Assert.False(p.ExtentAlloc[2]);
             Assert.Equal(1, p.ExtentAlloc.FindFirstFreeExtent());
+            Assert.True(p.ExtentAlloc[1]);
             p.ExtentAlloc[1] = false;
+            Assert.False(p.ExtentAlloc[1]);
             Assert.Equal(3, p.ExtentAlloc.FindFirstFreeExtent());
             for (var e = 0; e < DbPage.ExtentAllocPayload.ExtentsCapacity; e++)
                 p.ExtentAlloc[e] = false;
@@ -62,7 +66,9 @@ namespace Mordent.Core.Tests
             p.InitAsSGamPage();
             Assert.Equal(DbPageType.SharedAllocationMap, p.Header.Type);
             Assert.Equal(-1, p.ExtentAlloc.FindFirstFreeExtent()); // by default, SGAM map is empty.
+            Assert.False(p.ExtentAlloc[2]);
             p.ExtentAlloc[2] = true;
+            Assert.True(p.ExtentAlloc[2]);
             Assert.Equal(2, p.ExtentAlloc.FindFirstFreeExtent());
             p.ExtentAlloc[0] = true;
             Assert.Equal(0, p.ExtentAlloc.FindFirstFreeExtent());

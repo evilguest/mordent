@@ -30,6 +30,9 @@ namespace Mordent.Core
             _logFile = logFile;
             _filesManager = filesManager;
             _headers = new BufferHeader[capacity];
+            foreach(ref var h in _headers.AsSpan())
+                h.PageId = DbPageId.NotInit;
+
             _pages = new DbPage[capacity];
             Available = capacity;
         }
@@ -71,7 +74,7 @@ namespace Mordent.Core
 
         public void Unpin(int bufferNo)
         {
-            if(_headers[bufferNo].PinCount-- <= 0)
+            if(--_headers[bufferNo].PinCount <= 0)
             {
                 Available++;
                 _gotMoreBuffers.Set();
@@ -91,14 +94,14 @@ namespace Mordent.Core
             for(var attempt = 0; attempt < MAX_WAIT_ATTEMPTS; attempt++)
             {
                 lock(_lock)
-                    if (tryToPin(pageId, out int bufferNo))
+                    if (TryToPin(pageId, out int bufferNo))
                         return bufferNo;
                 _gotMoreBuffers.Wait(MAX_WAIT_MILLIS);
             }
             throw new Exception("Couldn't load buffer");
         }
 
-        private bool tryToPin(DbPageId pageId, out int bufferNo)
+        private bool TryToPin(DbPageId pageId, out int bufferNo)
         {
             bufferNo = FindExistingBuffer(pageId);
             if (bufferNo == -1)
@@ -116,6 +119,8 @@ namespace Mordent.Core
 
         private int ChooseUnpinnedBuffer()
         {
+            if (Available == 0)
+                return -1;
             for (var i = 0; i < _headers.Length; i++)
                 if (!IsPinned(i))
                     return i;
@@ -130,5 +135,36 @@ namespace Mordent.Core
                     return i;
             return -1;
         }
+
+        public int PinNew()
+        {
+            for (var attempt = 0; attempt < MAX_WAIT_ATTEMPTS; attempt++)
+            {
+                lock (_lock)
+                    if (TryToPinNew(out int bufferNo))
+                        return bufferNo;
+                _gotMoreBuffers.Wait(MAX_WAIT_MILLIS);
+            }
+            throw new Exception("Couldn't load buffer");
+        }
+        public bool TryToPinNew(out int bufferNo)
+        {
+            bufferNo = ChooseUnpinnedBuffer();
+            if (bufferNo == -1)
+                return false;
+            AssignToNew(bufferNo);
+            Available--;
+            _headers[bufferNo].PinCount++;
+            return true;
+        }
+
+        private void AssignToNew(int bufferNo)
+        {
+            Flush(bufferNo);
+            _headers[bufferNo].PageId = _filesManager.AddPage();
+            _headers[bufferNo].PinCount = 0;
+        }
+
+        public DbPageId GetPageId(int bufferNo) => _headers[bufferNo].PageId;
     }
 }

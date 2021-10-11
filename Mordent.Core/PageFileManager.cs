@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Mordent.Core
 {
-    public class PageFileManager : IFileManager, IAsyncDisposable
+    public class PageFileManager : IFileManager//, IAsyncDisposable
     {
         private readonly int _pageSize = 1 << 14;
         private readonly object _sync = new();
@@ -69,11 +69,11 @@ namespace Mordent.Core
             GC.SuppressFinalize(this);
         }
 
-        public async ValueTask DisposeAsync()
-        {
-            await (_fileStream.DisposeAsync());
-            GC.SuppressFinalize(this);
-        }
+        //public async ValueTask DisposeAsync()
+        //{
+        //    await (_fileStream.DisposeAsync());
+        //    GC.SuppressFinalize(this);
+        //}
     }
     public struct PageFileManagerFactory : IFileManagerFactory<PageFileManager>
     {

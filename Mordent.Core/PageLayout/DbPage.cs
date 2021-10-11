@@ -4,13 +4,14 @@ namespace Mordent.Core
 {
     public enum DbPageType : ushort
     {
+        None,
         FileHeader,
         FreeSpace,
         GlobalAllocationMap,
         SharedAllocationMap,
         Heap,
         Index,
-        Log
+        Log,
     }
     [StructLayout(LayoutKind.Sequential, Size = DbPageHeader.Size)]
     public struct DbPageHeader
